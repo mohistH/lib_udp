@@ -29,7 +29,7 @@
 > If a udp frame length is largger than 10k,  it will be abandoned  
 
 * 3.2.send
-> If the buffer length is largger than (65536 - 8 - 20), it will not be send.  
+> If the buffer length is largger than (1500 - 8 - 20), it will not be send.  
 
 * 3.3. init_ip4
 > this function's first parameter is to set sccket timeout, whose unit is second
