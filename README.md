@@ -1,5 +1,5 @@
 ### about  
-  A. This is an library of udp, including multicast, unicast and broadcast,  written by c++11.
+  A. This is an library of udp, including multicast, unicast and broadcast,  written by c++11  
   B. It could be compiled successfuly on windows(win10), MacOS(mojave) and linux(Fedora)
 
 ### 1. usage  
