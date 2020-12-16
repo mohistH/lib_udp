@@ -6,7 +6,7 @@
 //#include <iostream>
 
 
-void lib_udp::win_thread_recv_data(void *param)
+void lib_udp::win_thread_recv_data_(void *param)
 {
 	// 1. check param
 	// -------------------------------------------------------------------------------
@@ -15,11 +15,11 @@ void lib_udp::win_thread_recv_data(void *param)
 
 	// 2.prepare params
 	// -------------------------------------------------------------------------------
-	lib_udp::udp_wsa* pself					= static_cast<lib_udp::udp_wsa*>(param);
-	lib_udp::udp_init_adress &adress		= pself->get_udp_wsa_init()._address;
-	lib_udp::udp_wsa_init_other& others		= pself->get_udp_wsa_init()._others;
-	std::mutex&	mutex_recv_queue			= pself->get_mutex_wsa_queue_recv();
-	lib_udp::queue_udp_recv & queue_recv	= pself->get_wsa_queue_recv();
+	lib_udp::udp_wsa_imp* pself					= static_cast<lib_udp::udp_wsa_imp*>(param);
+	lib_udp::udp_init_adress &adress		= pself->get_udp_wsa_init_()._address;
+	lib_udp::udp_wsa_init_other& others		= pself->get_udp_wsa_init_()._others;
+	std::mutex&	mutex_recv_queue			= pself->get_mutex_wsa_queue_recv_();
+	lib_udp::queue_udp_recv & queue_recv	= pself->get_wsa_queue_recv_();
 
 	int addr_len							= sizeof(struct sockaddr);
 	ULONG data_recv_len						= 0;
@@ -31,7 +31,7 @@ void lib_udp::win_thread_recv_data(void *param)
 
 	udp_recv_data_buf item;
 
-	while (pself->get_thread_recv_is_running())
+	while (pself->get_thread_recv_is_running_())
 	{
 		//std::cout << "\n----------------------33333333333333333333333---------------------\n";
 		ret_val							= WSARecvFrom(adress._socket, 
@@ -87,24 +87,24 @@ void lib_udp::win_thread_recv_data(void *param)
 /*
 *	@brief:
 */
-void lib_udp::win_thread_get_recv_data(void *param)
+void lib_udp::win_thread_get_recv_data_(void *param)
 {
 	if (NULL == param || nullptr == param)
 		return;
 
 	// -------------------------------------------------------------------------------
 	// 2. get param
-	lib_udp::udp_wsa *pself				= static_cast<lib_udp::udp_wsa*>(param);
-	lib_udp::udp_wsa_init &param_init	= pself->get_udp_wsa_init();
+	lib_udp::udp_wsa_imp *pself				= static_cast<lib_udp::udp_wsa_imp*>(param);
+	lib_udp::udp_wsa_init &param_init	= pself->get_udp_wsa_init_();
 
 	lib_udp::udp_wsa_init_other& others	= param_init._others;
-	std::mutex& mutex_queue_recv		= pself->get_mutex_wsa_queue_recv();
-	lib_udp::queue_udp_recv&queue_wsa_recv	= pself->get_wsa_queue_recv();
+	std::mutex& mutex_queue_recv		= pself->get_mutex_wsa_queue_recv_();
+	lib_udp::queue_udp_recv&queue_wsa_recv	= pself->get_wsa_queue_recv_();
 	lib_udp::udp_recv_data_buf item;
 
 	bool is_got_success = false;
 	// true-go on this while 
-	while (pself->get_thread_get_recv_data_is_running())
+	while (pself->get_thread_get_recv_data_is_running_())
 	{
 		if (mutex_queue_recv.try_lock())
 		{
@@ -120,7 +120,7 @@ void lib_udp::win_thread_get_recv_data(void *param)
 			// to call recv_data function
 			if (is_got_success)
 				if (others._pfunc_recv)
-					others._pfunc_recv->recv_data(item._buf, item._buf_len_valid);
+					others._pfunc_recv->on_recv_data_(item._buf, item._buf_len_valid);
 		}
 
 		is_got_success = false;
@@ -133,7 +133,7 @@ void lib_udp::win_thread_get_recv_data(void *param)
 /*
 *	@brief:
 */
-lib_udp::udp_wsa::udp_wsa()
+lib_udp::udp_wsa_imp::udp_wsa_imp()
 {
 	init_env();
 }
@@ -141,7 +141,7 @@ lib_udp::udp_wsa::udp_wsa()
 /*
 *	@brief:
 */
-int lib_udp::udp_wsa::init_ip4(udp_param& param)
+int lib_udp::udp_wsa_imp::init_ip4_(udp_param& param)
 {
 	int ret_val = 0;
 
@@ -162,7 +162,7 @@ int lib_udp::udp_wsa::init_ip4(udp_param& param)
 	}
 
 	// 3��save the param to initialize
-	memcpy(&_udp_init._param, &param, sizeof(param));
+	memcpy(&udp_init_._param, &param, sizeof(param));
 
 	return ret_val;
 }
@@ -170,14 +170,14 @@ int lib_udp::udp_wsa::init_ip4(udp_param& param)
 /*
 *	@brief:
 */
-int lib_udp::udp_wsa::open(const unsigned int time_out_send, udpsocket_recv* pfunc_recv /*= nullptr*/)
+int lib_udp::udp_wsa_imp::open_(const unsigned int time_out_send, irecv_data_interface* pfunc_recv /*= nullptr*/)
 {
 	int ret_val = 0;
 
 	// -------------------------------------------------------------------------------
 	// 1. initialize adresses 
-	udp_param& param						= _udp_init._param;
-	udp_init_adress& adress					= _udp_init._address;
+	udp_param& param						= udp_init_._param;
+	udp_init_adress& adress					= udp_init_._address;
 
 	adress._address_dest.sin_port			= htons(param._port_dst);
 	adress._address_local.sin_port			= htons(param._port_dst);
@@ -356,14 +356,14 @@ int lib_udp::udp_wsa::open(const unsigned int time_out_send, udpsocket_recv* pfu
 	// 6. to prepare params of recv data
 	if (NULL != pfunc_recv || nullptr != pfunc_recv)
 	{
-		udp_wsa_init_other &others = _udp_init._others;
+		udp_wsa_init_other &others = udp_init_._others;
 		others ._pfunc_recv= pfunc_recv;
 
-		_thread_recv_is_running = true;
-		_thread_recv = std::thread(win_thread_recv_data, (void*)this);
+		thread_recv_is_running_ = true;
+		_thread_recv = std::thread(win_thread_recv_data_, (void*)this);
 
-		_thread_get_recv_data_is_running = true;
-		_thread_get_recv_data = std::thread(win_thread_get_recv_data, (void*)this);
+		thread_get_recv_data_is_running_ = true;
+		thread_get_recv_data_ = std::thread(win_thread_get_recv_data_, (void*)this);
 	}
 
 	return ret_val;
@@ -372,15 +372,15 @@ int lib_udp::udp_wsa::open(const unsigned int time_out_send, udpsocket_recv* pfu
 /*
 *	@brief:
 */
-int lib_udp::udp_wsa::send(const char *psend, const unsigned int len_send)
+int lib_udp::udp_wsa_imp::send_(const char *psend, const unsigned int len_send)
 {
 
 	// 1. initialize params
 	// -------------------------------------------------------------------------------
 	int ret_val = 0;
-	const bool&	is_success		= _udp_init._address._socket_is_open;
-	udp_init_adress &adress		= _udp_init._address;
-	udp_wsa_init_other& others	= _udp_init._others;
+	const bool&	is_success		= udp_init_._address._socket_is_open;
+	udp_init_adress &adress		= udp_init_._address;
+	udp_wsa_init_other& others	= udp_init_._others;
 	static int address_len		= sizeof(adress._address_dest);
 	ULONG len_send_data			= static_cast<ULONG>(len_send);
 
@@ -407,23 +407,23 @@ int lib_udp::udp_wsa::send(const char *psend, const unsigned int len_send)
 /*
 *	@brief:
 */
-int lib_udp::udp_wsa::shutdown()
+int lib_udp::udp_wsa_imp::shutdown_()
 {
 	// 1. socket doesnt open
-	if (!_udp_init._address._socket_is_open)
+	if (!udp_init_._address._socket_is_open)
 	{
 		WSACleanup();
 		return -20086;
 	}
 
-	_queue_recv.empty();
+	queue_recv_.empty();
 
 	// 2. set it false
-	_udp_init._address._socket_is_open = false;
+	udp_init_._address._socket_is_open = false;
 
 	// 3.
 	int ret_val = 0;
-	ret_val = closesocket(_udp_init._address._socket);
+	ret_val = closesocket(udp_init_._address._socket);
 
 	// 4.
 	if (0 != ret_val)
@@ -431,7 +431,7 @@ int lib_udp::udp_wsa::shutdown()
 
 	WSACleanup();
 
-	if (nullptr != _udp_init._others._pfunc_recv || NULL != _udp_init._others._pfunc_recv)
+	if (nullptr != udp_init_._others._pfunc_recv || NULL != udp_init_._others._pfunc_recv)
 	{
 		// to end the thread
 		auto thread_join					= [](std::thread& thread_t, bool& is_running )
@@ -451,10 +451,10 @@ int lib_udp::udp_wsa::shutdown()
 		//_thread_get_recv_data_is_running	= false;
 		//_thread_get_recv_data.join();
 
-		thread_join(_thread_recv,			 _thread_recv_is_running);
-		thread_join(_thread_get_recv_data,	_thread_get_recv_data_is_running);
+		thread_join(_thread_recv,			 thread_recv_is_running_);
+		thread_join(thread_get_recv_data_,	thread_get_recv_data_is_running_);
 
-		_udp_init._others._pfunc_recv		= nullptr;
+		udp_init_._others._pfunc_recv		= nullptr;
 	}
 
 	return ret_val;
@@ -463,28 +463,28 @@ int lib_udp::udp_wsa::shutdown()
 /*
 *	@brief:
 */
-void lib_udp::udp_wsa::init_env()
+void lib_udp::udp_wsa_imp::init_env()
 {
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-	_udp_init._address._socket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	udp_init_._address._socket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
 	// 2. set adress family
-	_udp_init._address._address_dest.sin_family			= AF_INET;
-	_udp_init._address._address_local.sin_family		= AF_INET;
-	_udp_init._address._address_local_any.sin_family	= AF_INET;
+	udp_init_._address._address_dest.sin_family			= AF_INET;
+	udp_init_._address._address_local.sin_family		= AF_INET;
+	udp_init_._address._address_local_any.sin_family	= AF_INET;
 
-	_queue_recv.empty();
+	queue_recv_.empty();
 
 }
 
 /*
 *	@brief:
 */
-lib_udp::udp_wsa::~udp_wsa()
+lib_udp::udp_wsa_imp::~udp_wsa_imp()
 {
-	shutdown();
+	shutdown_();
 }
 
 

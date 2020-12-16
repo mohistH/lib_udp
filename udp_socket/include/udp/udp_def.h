@@ -24,7 +24,7 @@
 
 // -------------------------------------------------------------------------------
 //   23-08-2020   to use spdlog. 
-#define _use_spdlog_
+//#define _use_spdlog_
 
 // to output debug information
 #define _use_debug_
@@ -107,7 +107,7 @@ namespace lib_udp
 	// -------------------------------------------------------------------------------
 	struct udp_init_other_
 	{
-		udpsocket_recv*		_pfunc_recv_data;
+		irecv_data_interface*		_pfunc_recv_data;
 
 		void zero()
 		{

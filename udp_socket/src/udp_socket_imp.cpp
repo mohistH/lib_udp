@@ -8,15 +8,8 @@
 
 
 
-/* 
-*  @ brief: the thread to recv data
-*  @ void * param - the adress of udp_socket_imp object 
-*  @ return - void
-		
-*/
-void lib_udp::thread_recv_data(void* param)
+void lib_udp::udp_socket_imp::thread_recv_data_(void* param)
 {
-
 	// -------------------------------------------------------------------------------
 	// 1. parameter is nullptr
 	if (nullptr == param || NULL == param)
@@ -32,7 +25,7 @@ void lib_udp::thread_recv_data(void* param)
 
 	char	arr_recv[lib_udp::len_buf_1024_3] = { 0 };
 	const int len_recv					= lib_udp::len_buf_1024_3 + 1;
-	lib_udp::udp_param_init &param_init = pself->get_param_init();
+	lib_udp::udp_param_init &param_init = pself->get_param_init_();
 
 	int addr_len						= sizeof(struct sockaddr);
 	lib_udp::udp_param&param_base		= param_init._param;
@@ -41,10 +34,10 @@ void lib_udp::thread_recv_data(void* param)
 	
 	// -------------------------------------------------------------------------------
 	//   23-08-2020   
-	lib_udp::queue_udp_recv& queue_recv = pself->get_queue_recv();
+	lib_udp::queue_udp_recv& queue_recv = pself->get_queue_recv_();
 	lib_udp::udp_recv_data_buf queue_recv_item;
 	const int queu_recv_len_2			= lib_udp::queue_recv_size_10;
-	std::mutex& mutex_queue_recv		= pself->get_mutex_queue_recv();
+	std::mutex& mutex_queue_recv		= pself->get_mutex_queue_recv_();
 	
 
 #ifndef _WIN32
@@ -65,7 +58,7 @@ void lib_udp::thread_recv_data(void* param)
 	// -------------------------------------------------------------------------------
 	// 4. recv data;
 	int ret_val							= 0;
-	while ( pself->get_thread_recv_is_running() )
+	while ( pself->get_thread_recv_is_running_() )
 	{
 		log_to_debug("接收线程: 111111111111111111111111111");
 
@@ -126,7 +119,7 @@ void lib_udp::thread_recv_data(void* param)
 		else
 		{
 			log_to_debug("接收线程: 77777777777777777777777777");
-			pself->log_info("recv_data_thread, error msg id = {0}", pself->get_error_id());
+			pself->log_info_("recv_data_thread, error msg id = {0}", pself->get_error_id_());
 		}
 	}
 
@@ -134,12 +127,10 @@ void lib_udp::thread_recv_data(void* param)
 
 
 
-/* @ brief: to get data from recv queue
-*  @ void * param - udpsocket_imp
-*  @ return - void
-		
-*/
-void lib_udp::thread_get_data_from_recv_queue(void *param)
+//
+//	@brief: 
+// 
+void lib_udp::udp_socket_imp::thread_get_data_from_recv_queue_(void *param)
 {
 	// -------------------------------------------------------------------------------
 	// 1. parameter is nullptr
@@ -151,15 +142,15 @@ void lib_udp::thread_get_data_from_recv_queue(void *param)
 	// -------------------------------------------------------------------------------
 	// 2. get param
 	lib_udp::udp_socket_imp *pself		= static_cast<lib_udp::udp_socket_imp*>(param);
-	lib_udp::udp_param_init &param_init = pself->get_param_init();
+	lib_udp::udp_param_init &param_init = pself->get_param_init_();
 	lib_udp::udp_init_other& others		= param_init._others;
-	std::mutex& mutex_queue_recv		= pself->get_mutex_queue_recv();
-	lib_udp::queue_udp_recv&queue_recv	= pself->get_queue_recv();
+	std::mutex& mutex_queue_recv		= pself->get_mutex_queue_recv_();
+	lib_udp::queue_udp_recv&queue_recv	= pself->get_queue_recv_();
 	lib_udp::udp_recv_data_buf item;
 
 	bool is_got_success					= false;
 	// true-go on this while 
-	while (pself->get_thread_get_recv_is_running())
+	while (pself->get_thread_get_recv_is_running_())
 	{
 		if (mutex_queue_recv.try_lock())
 		{
@@ -175,7 +166,7 @@ void lib_udp::thread_get_data_from_recv_queue(void *param)
 			// to call recv_data function
 			if (is_got_success)
 				if (others._pfunc_recv_data)
-					others._pfunc_recv_data->recv_data(item._buf, item._buf_len_valid);
+					others._pfunc_recv_data->on_recv_data_(item._buf, item._buf_len_valid);
 		}
 
 		is_got_success = false;
@@ -199,15 +190,15 @@ lib_udp::udp_socket_imp::udp_socket_imp()
 /*
 *	@brief: to open socket of udp 
 */
-int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_recv* pfunc_recv)
+int lib_udp::udp_socket_imp::open_(const unsigned int time_out_send, irecv_data_interface* pfunc_recv)
 {
 	int ret_val											= 0;
 
 	// -------------------------------------------------------------------------------
 	// 1. initialize adresses 
-	lib_udp::udp_param&param_base						= _udp_param_init._param;
-	lib_udp::udp_init_other& others						= _udp_param_init._others;
-	lib_udp::udp_init_adress& adress					= _udp_param_init._adress;
+	lib_udp::udp_param&param_base						= udp_param_init_._param;
+	lib_udp::udp_init_other& others						= udp_param_init_._others;
+	lib_udp::udp_init_adress& adress					= udp_param_init_._adress;
 	bool& is_log_debug									= param_base._is_log_debug;
 	
 	adress._address_dest.sin_port						= htons(param_base._port_dst);
@@ -240,8 +231,8 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 
 		if ( 0 != ret_val)
 		{
-			ret_val = get_error_id();
-			log_info(" open  : [set time out send failure], ret = {0}, error msg id = {1}", ret_val, ret_val);
+			ret_val = get_error_id_();
+			log_info_(" open  : [set time out send failure], ret = {0}, error msg id = {1}", ret_val, ret_val);
 			return ret_val;
 		}
 	}
@@ -253,16 +244,16 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 	ret_val = setsockopt(adress._socket, SOL_SOCKET, SO_SNDBUF,		(const char *)&len_buf_recv_send,	sizeof(len_buf_recv_send));
 	if ( 0 != ret_val)
 	{
-		ret_val = get_error_id();
-		log_info(" open : [SO_SNDBUF], ret = {0}, error msg id = {1}", ret_val, ret_val);
+		ret_val = get_error_id_();
+		log_info_(" open : [SO_SNDBUF], ret = {0}, error msg id = {1}", ret_val, ret_val);
 		return ret_val;
 	}
 
 	ret_val = setsockopt(adress._socket, SOL_SOCKET, SO_RCVBUF,		(const char *)&len_buf_recv_send,	sizeof(len_buf_recv_send));	
 	if ( 0 != ret_val)
 	{
-		ret_val = get_error_id();
-		log_info(" open : [ SO_RCVBUF], ret = {0}, error msg id = {1}", ret_val, ret_val);
+		ret_val = get_error_id_();
+		log_info_(" open : [ SO_RCVBUF], ret = {0}, error msg id = {1}", ret_val, ret_val);
 		return ret_val;
 	}
 
@@ -278,8 +269,8 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 	// an error occured, log it
 	if ( 0 != ret_val)
 	{
-		ret_val = get_error_id();
-		log_info(" open : [SO_SNDBUF | SO_RCVBUF | SO_REUSEADDR], ret = {0}, error msg id = {1}", ret_val, ret_val);
+		ret_val = get_error_id_();
+		log_info_(" open : [SO_SNDBUF | SO_RCVBUF | SO_REUSEADDR], ret = {0}, error msg id = {1}", ret_val, ret_val);
 		return ret_val;
 	}
 
@@ -310,8 +301,8 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 	ret_val = bind(adress._socket, (struct sockaddr *)&(adress._address_local), sizeof(adress._address_local));
 	if (0 != ret_val)
 	{
-		ret_val = get_error_id();
-		log_info("open : [bind local adress], error msg id = {0}", ret_val);
+		ret_val = get_error_id_();
+		log_info_("open : [bind local adress], error msg id = {0}", ret_val);
 		return ret_val;
 	}
 	
@@ -321,7 +312,7 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 	switch (param_base._cast_type)
 	{
 		// multicast
-	case udp_multi_cast:
+	case lib_udp::udp_multi_cast:
 		{
 			// 5.1. IP_MULTICAST_IF
 			ret_val = setsockopt(adress._socket, IPPROTO_IP, IP_MULTICAST_IF, (const char *)&(adress._address_local.sin_addr), sizeof(adress._address_local.sin_addr));
@@ -329,8 +320,8 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 			// failure
 			if (0 != ret_val)
 			{
-				ret_val = get_error_id();
-				log_info("open : [multiast], ret = {0}, error msg id = {1}", ret_val, ret_val);
+				ret_val = get_error_id_();
+				log_info_("open : [multiast], ret = {0}, error msg id = {1}", ret_val, ret_val);
 				return ret_val;
 			}
 
@@ -347,8 +338,8 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 			// failure
 			if (0 != ret_val)
 			{
-				ret_val = get_error_id();
-				log_info(" open : [ IP_ADD_MEMBERSHIP ], ret = {0}, error msg id = {1}", ret_val, ret_val);
+				ret_val = get_error_id_();
+				log_info_(" open : [ IP_ADD_MEMBERSHIP ], ret = {0}, error msg id = {1}", ret_val, ret_val);
 
 				return ret_val;
 			}
@@ -361,28 +352,28 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 			// failure
 			if (0 != ret_val)
 			{
-				ret_val = get_error_id();
-				log_info("open : [ IP_MULTICAST_LOOP ], ret = {0}, error msg id = {1}", ret_val, ret_val);
+				ret_val = get_error_id_();
+				log_info_("open : [ IP_MULTICAST_LOOP ], ret = {0}, error msg id = {1}", ret_val, ret_val);
 				return ret_val;
 			}
 		}
 		break;
 
-	case udp_broad_cast:
+	case lib_udp::udp_broad_cast:
 		{
 			const char use_broad_cast = 1;
 			ret_val = setsockopt(adress._socket, SOL_SOCKET, SO_BROADCAST, &use_broad_cast, sizeof(use_broad_cast));
 			if (0 != ret_val)
 			{
-				ret_val = get_error_id();
-				log_info(" int open(const unsigned int time_out_send) (256) : [ udp_broad_cast ], ret = {0}, error msg id = {1}", ret_val, ret_val); 
+				ret_val = get_error_id_();
+				log_info_(" int open(const unsigned int time_out_send) (256) : [ udp_broad_cast ], ret = {0}, error msg id = {1}", ret_val, ret_val); 
 				return ret_val;
 			}
 		}
 		break;
 
 		// do nothing
-	case udp_uni_cast:
+	case lib_udp::udp_uni_cast:
 		break;
 
 		// other . error
@@ -395,7 +386,7 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 	if ( 0 == ret_val)
 		adress._socket_is_open = true;
 
-	log_info("open: initialized success");
+	log_info_("open: initialized success");
 
 
 	// -------------------------------------------------------------------------------
@@ -405,12 +396,12 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 		others._pfunc_recv_data		= pfunc_recv;
 
 		// 6.1 create a thead to recv data
-		_thread_recv_is_running		= true;
-		_thread_recv				= std::thread(thread_recv_data, (void*)this);
+		thread_recv_is_running_		= true;
+		thread_recv_				= std::thread(thread_recv_data_, (void*)this);
 
 		// 6.2 create a thread to get recv data
-		_thread_get_recv_is_running = true;
-		_thread_get_recv			= std::thread(thread_get_data_from_recv_queue, (void*)this);
+		thread_get_recv_is_running_ = true;
+		thread_get_recv_			= std::thread(thread_get_data_from_recv_queue_, (void*)this);
 	}
 
 	return ret_val;
@@ -419,19 +410,20 @@ int lib_udp::udp_socket_imp::open(const unsigned int time_out_send, udpsocket_re
 /*
 *	@brief: send data
 */
-int lib_udp::udp_socket_imp::send(const char *psend, const unsigned int len_send)
+int lib_udp::udp_socket_imp::send_(const char *psend, const unsigned int len_send)
 {
-	static const int len_max_send	= 65535 - 20 - 8; 
+	static const int len_max_send	= len_buf_send_recv_10240;
 	const int psend_len				= strlen(psend);
 	// psend is null or send data is too long
 	if (    (NULL 		== psend) ||
 			(nullptr 	== psend) ||
 			(len_max_send - 1 < len_send) || 
-			(len_max_send < psend_len)  )
+			(len_max_send < psend_len)  || 
+			(0 == len_max_send) )
 		return -20087;
 
 	int ret_val = 0;
-	udp_init_adress& adress			= _udp_param_init._adress;
+	udp_init_adress& adress			= udp_param_init_._adress;
 	const bool&	is_success			= adress._socket_is_open;
 	static int len_addr				= sizeof(adress._address_dest);
 
@@ -447,7 +439,7 @@ int lib_udp::udp_socket_imp::send(const char *psend, const unsigned int len_send
 	
 	// sending failure
 	if (-1 == ret_val)
-		ret_val = get_error_id();
+		ret_val = get_error_id_();
 
 	return ret_val;
 }
@@ -455,10 +447,10 @@ int lib_udp::udp_socket_imp::send(const char *psend, const unsigned int len_send
 /*
 *	@brief: to close socket
 */
-int lib_udp::udp_socket_imp::shutdown()
+int lib_udp::udp_socket_imp::shutdown_()
 {
-	udp_init_other_	&others	= _udp_param_init._others;
-	udp_init_adress& adress = _udp_param_init._adress;
+	udp_init_other_	&others	= udp_param_init_._others;
+	udp_init_adress& adress = udp_param_init_._adress;
 	bool&	is_success		= adress._socket_is_open;
 
 	// 0. emepty queue of receiving
@@ -489,7 +481,7 @@ int lib_udp::udp_socket_imp::shutdown()
 
 	// an error occured, log it
 	if ( 0 != ret_val)
-		ret_val = get_error_id();
+		ret_val = get_error_id_();
 	
 	// whether udp is open , call this function release , because it was created at contructor
 #ifdef _WIN32
@@ -519,8 +511,8 @@ int lib_udp::udp_socket_imp::shutdown()
 		//_thread_get_recv_is_running = false;
 		//_thread_get_recv.join();
 
-		thread_join(_thread_recv, _thread_recv_is_running);
-		thread_join(_thread_get_recv,_thread_get_recv_is_running);
+		thread_join(thread_recv_, thread_recv_is_running_);
+		thread_join(thread_get_recv_,thread_get_recv_is_running_);
 
 		// 4.
 		// -------------------------------------------------------------------------------
@@ -533,7 +525,7 @@ int lib_udp::udp_socket_imp::shutdown()
 /*
 *	@brief:
 */
-int lib_udp::udp_socket_imp::uninit()
+int lib_udp::udp_socket_imp::uninit_()
 {
 	
 	// to avoid occurring an error while running deconstructor
@@ -542,7 +534,7 @@ int lib_udp::udp_socket_imp::uninit()
 #ifdef _use_spdlog_
 	try
 	{
-		if (_udp_param_init._param._is_log_debug)
+		if (udp_param_init_._param._is_log_debug)
 			spdlog::shutdown();
 	}
 	catch (const spdlog::spdlog_ex &ex)
@@ -561,7 +553,7 @@ int lib_udp::udp_socket_imp::uninit()
 /*
 *	@brief: get the id of error msg
 */
-const int lib_udp::udp_socket_imp::get_error_id() 
+const int lib_udp::udp_socket_imp::get_error_id_() 
 {
 	int ret_val = 0;
 
@@ -574,14 +566,16 @@ const int lib_udp::udp_socket_imp::get_error_id()
 	return ret_val;
 }
 
+
+
 /*
 *	@brief: to initialize parameters
 */
 void lib_udp::udp_socket_imp::init_params()
 {
 
-	udp_init_other_	&others = _udp_param_init._others;
-	udp_init_adress& adress = _udp_param_init._adress;
+	udp_init_other_	&others = udp_param_init_._others;
+	udp_init_adress& adress = udp_param_init_._adress;
 
 
 	// 0. create socket
@@ -601,7 +595,7 @@ void lib_udp::udp_socket_imp::init_params()
 	adress._address_local_any.sin_family	= AF_INET;
 
 	// 3. to initialize spdlog, a library to log file
-	log_info("dynamic library constructed success");
+	log_info_("dynamic library constructed success");
 
 	
 	// -------------------------------------------------------------------------------
@@ -613,7 +607,7 @@ void lib_udp::udp_socket_imp::init_params()
 /*
 *	@brief: to check parameters 
 */
-int lib_udp::udp_socket_imp::init_ip4(udp_param& param)
+int lib_udp::udp_socket_imp::init_ip4_(udp_param& param)
 {
 	int ret_val = 0;
 
@@ -634,9 +628,9 @@ int lib_udp::udp_socket_imp::init_ip4(udp_param& param)
 	}
 
 	// 3. save the param to initialize
-	memcpy(&_udp_param_init._param, &param, sizeof(param));
+	memcpy(&udp_param_init_._param, &param, sizeof(param));
 
-	log_info("init_ip4: initialized success");
+	log_info_("init_ip4: initialized success");
 
 	return ret_val;
 }
@@ -648,6 +642,6 @@ int lib_udp::udp_socket_imp::init_ip4(udp_param& param)
 lib_udp::udp_socket_imp::~udp_socket_imp()
 {
 	// to check socket status, if its openning, close it 
-	shutdown();
-	uninit();
+	shutdown_();
+	uninit_();
 }

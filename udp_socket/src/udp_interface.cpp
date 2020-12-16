@@ -19,11 +19,10 @@
 /*
 *	@brief:
 */
-lib_udp::udpsocket* lib_udp::udp_create()
+lib_udp::udp_socket_interface* lib_udp::udp_create()
 {
 	return  new(std::nothrow) udp_socket_imp;
 
-	// return NULL;
 }
 
 
@@ -31,7 +30,7 @@ lib_udp::udpsocket* lib_udp::udp_create()
 /*
 *	@brief: to release the object, whose type is udpsocket*
 */
-void lib_udp::udp_release(udpsocket* pudp)
+void lib_udp::udp_release(udp_socket_interface* pudp)
 {
 	if (NULL == pudp || nullptr == pudp)
 		return;
@@ -47,10 +46,10 @@ void lib_udp::udp_release(udpsocket* pudp)
 /*
 *	@brief:
 */
-lib_udp::udpsocket* lib_udp::udp_wsa_create()
+lib_udp::udp_socket_interface* lib_udp::udp_wsa_create()
 {
 #ifdef _WIN32
-	return  new(std::nothrow) udp_wsa;
+	return  new(std::nothrow) udp_wsa_imp;
 #else
 	return NULL;
 #endif // !_WIN32

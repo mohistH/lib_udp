@@ -5,7 +5,7 @@
 
 using namespace lib_udp;
 
-class my_udp : public udpsocket_recv
+class my_udp : public irecv_data_interface
 {
 public:
 	explicit my_udp();
@@ -16,10 +16,10 @@ public:
 	int open(const unsigned int time_out_send);
 	int send(const char *psend, const unsigned int len_send);
 	int shutdown();
-	void recv_data(char *pdata_recv, unsigned int recv_data_len);
+	void on_recv_data_(char *pdata_recv, unsigned int recv_data_len);
 
 private:
-	udpsocket *	_pudp = nullptr;
+	udp_socket_interface *	_pudp = nullptr;
 
 	bool		_is_shutdown = false;
 };

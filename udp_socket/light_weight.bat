@@ -8,9 +8,16 @@ del /s *.ilk
 del /s *.exp
 del /s *.obj
 del /s *.iobj
-del /s *.pch
+del /s *.ipch
+del /s *.tlh
+del /s *.obj.enc
+del /s *.tli
+del /s *.exp
 del /s *.pch
 
-rd /s /q .vs
+rd /s /q %cd%\.vs
+del /s %cd%\Debug\*.lib
+del /s %cd%\Release\*.lib
+
 
 pause

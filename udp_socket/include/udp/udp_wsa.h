@@ -19,8 +19,8 @@
 namespace lib_udp
 {
 
-	void win_thread_recv_data(void *param);
-	void win_thread_get_recv_data(void *param);
+	void win_thread_recv_data_(void *param);
+	void win_thread_get_recv_data_(void *param);
 
 #ifdef _use_old_
 	// -------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ namespace lib_udp
 
 	public:
 		// recv_interface
-		udpsocket_recv *_pfunc_recv;
+		irecv_data_interface *_pfunc_recv;
 
 		// send buf
 		WSABUF			_buf_send;
@@ -134,47 +134,47 @@ namespace lib_udp
 	/*
 	*	@ brief: using wsaoverlapped model to create udp socket
 	*/
-	class udp_wsa : public udpsocket
+	class udp_wsa_imp : public udp_socket_interface
 	{
 	public:
-		explicit udp_wsa();
-		virtual ~udp_wsa();
+		explicit udp_wsa_imp();
+		virtual ~udp_wsa_imp();
 
-		udp_wsa(const udp_wsa& instance) = delete;
-		udp_wsa& operator = (const udp_wsa& instance) = delete;
-		udp_wsa(const udp_wsa&& instance) = delete;
-		udp_wsa&& operator = (const udp_wsa&& instance) = delete;
+		udp_wsa_imp(const udp_wsa_imp& instance) = delete;
+		udp_wsa_imp& operator = (const udp_wsa_imp& instance) = delete;
+		udp_wsa_imp(const udp_wsa_imp&& instance) = delete;
+		udp_wsa_imp& operator = (const udp_wsa_imp&& instance) = delete;
 		// -------------------------------------------------------------------------------
 		
-		int init_ip4(udp_param& param);
-		int open(const unsigned int time_out_send, udpsocket_recv* pfunc_recv = nullptr);
-		int send(const char *psend, const unsigned int len_send) ;
-		int shutdown();
+		int init_ip4_(udp_param& param);
+		int open_(const unsigned int time_out_send, irecv_data_interface* pfunc_recv = nullptr);
+		int send_(const char *psend, const unsigned int len_send) ;
+		int shutdown_();
 
-		const bool get_thread_recv_is_running() const { return _thread_recv_is_running; }
-		udp_wsa_init& get_udp_wsa_init() { return _udp_init; };
+		const bool get_thread_recv_is_running_() const { return thread_recv_is_running_; }
+		udp_wsa_init& get_udp_wsa_init_() { return udp_init_; };
 
-		const bool get_thread_get_recv_data_is_running() const { return _thread_get_recv_data_is_running; }
+		const bool get_thread_get_recv_data_is_running_() const { return thread_get_recv_data_is_running_; }
 
-		queue_udp_recv& get_wsa_queue_recv() { return _queue_recv; }
-		std::mutex& get_mutex_wsa_queue_recv() { return _mutex_wsa_queue_recv; }
+		queue_udp_recv& get_wsa_queue_recv_() { return queue_recv_; }
+		std::mutex& get_mutex_wsa_queue_recv_() { return mutex_wsa_queue_recv_; }
 
 	protected:
 		void init_env();
 
 	private:
-		udp_wsa_init	_udp_init;
+		udp_wsa_init	udp_init_;
 
-		bool		_thread_recv_is_running = false;
+		bool		thread_recv_is_running_ = false;
 		std::thread	_thread_recv;
 
-		bool		_thread_get_recv_data_is_running = false;
-		std::thread	_thread_get_recv_data;
+		bool		thread_get_recv_data_is_running_ = false;
+		std::thread	thread_get_recv_data_;
 
 		// use queue to recv data, his size is 2;
-		queue_udp_recv	_queue_recv;
+		queue_udp_recv	queue_recv_;
 		// to lock _queue_recv
-		std::mutex				_mutex_wsa_queue_recv;
+		std::mutex				mutex_wsa_queue_recv_;
 	};
 
 }

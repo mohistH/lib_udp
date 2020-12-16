@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "my_udp.h"
 
-#pragma comment(lib, "lib/mfc_lib_udp_shared.lib")
+#pragma comment(lib, "lib/lib_udp.lib")
 
 
 my_udp::my_udp()
@@ -25,7 +25,7 @@ int my_udp::init_ip4(udp_param& param)
 	if (!_pudp)
 		return -20000;
 
-	return _pudp->init_ip4(param);
+	return _pudp->init_ip4_(param);
 }
 
 /*
@@ -36,7 +36,7 @@ int my_udp::open(const unsigned int time_out_send)
 	if (!_pudp)
 		return -20000;
 
-	return _pudp->open(time_out_send, this);
+	return _pudp->open_(time_out_send, this);
 }
 
 /*
@@ -47,7 +47,7 @@ int my_udp::send(const char *psend, const unsigned int len_send)
 	if (!_pudp)
 		return -20000;
 
-	return _pudp->send(psend, len_send);
+	return _pudp->send_(psend, len_send);
 }
 
 /*
@@ -58,7 +58,7 @@ int my_udp::shutdown()
 	if (!_pudp)
 		return -20000;
 
-	int ret_val	= _pudp->shutdown();
+	int ret_val	= _pudp->shutdown_();
 	udp_release(_pudp);
 
 	_is_shutdown	= true;
@@ -69,7 +69,7 @@ int my_udp::shutdown()
 /*
 *	@brief:
 */
-void my_udp::recv_data(char *pdata_recv, unsigned int recv_data_len)
+void my_udp::on_recv_data_(char *pdata_recv, unsigned int recv_data_len)
 {
 #ifdef _DEBUG
 	TRACE("\n------------- recv data: %d ---------------------------\n", recv_data_len);

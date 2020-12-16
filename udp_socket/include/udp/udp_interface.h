@@ -12,20 +12,20 @@ namespace lib_udp
 
 #ifdef _WIN32
 
-	#ifndef _oct_udp_api_export_export_
+	#ifndef _oct_udp_api_export_
 		#define _oct_udp_api_export_		__declspec(dllexport)
 	#else
 		#define _oct_udp_api_export_		__declspec(dllimport)
-	#endif //! _oct_udp_api_export_export_
+	#endif //! _oct_udp_api_export_
 
 
 
 #else 
 
-	#ifndef _oct_udp_api_export_export_
+	#ifndef _oct_udp_api_export_
 		#define _oct_udp_api_export_		__attribute__((visibility("default")))
 		//#define _oct_udp_api_export_		__attribute__ ((visibility("default")))
-	#endif // !_oct_udp_api_export_export_
+	#endif // !_oct_udp_api_export_
 
 
 
@@ -106,10 +106,10 @@ namespace lib_udp
 	/*
 	*	@ brief: to recv data, you must inherit udpsocket_recv class
 	*/
-	class udpsocket_recv
+	class irecv_data_interface
 	{
 	public:
-		virtual ~udpsocket_recv(){}
+		virtual ~irecv_data_interface(){}
 
 
 		/* @ brief: when socket has received data, it will call this function to pass data
@@ -118,17 +118,17 @@ namespace lib_udp
 		*  @ return - void
 				
 		*/
-		virtual void recv_data(char *pdata_recv, unsigned int recv_data_len) = 0;
+		virtual void on_recv_data_(char *pdata_recv, unsigned int recv_data_len) = 0;
 	};
 
 
 	/*
 	*	@ brief: udp socket. it has interfaces of udp socket, including initialize, send and receive
 	*/
-	class udpsocket
+	class udp_socket_interface
 	{
 	public:
-		virtual ~udpsocket(){}
+		virtual ~udp_socket_interface(){}
 
 		/* @ brief: to check parameters
 		*  @ upd_param & param - parameters of udp
@@ -137,7 +137,7 @@ namespace lib_udp
 				1 - faluere, param._port_dstis zero.
 				2 - faluere, param._pip4_dst's length is less than 7
 		*/
-		virtual int init_ip4(udp_param& param) = 0;
+		virtual int init_ip4_(udp_param& param) = 0;
 		
 		
 		/* @ brief: initialize socket of udp
@@ -147,7 +147,7 @@ namespace lib_udp
 				20086 - failure, the parameter's type of udp_cast_type gets wrong
 				X - faluere, the error's id to call  setsockopt function
 		*/
-		virtual int open(const unsigned int time_out_send, udpsocket_recv* pfunc_recv = nullptr) = 0;
+		virtual int open_(const unsigned int time_out_send, irecv_data_interface* pfunc_recv = nullptr) = 0;
 
 
 
@@ -158,11 +158,11 @@ namespace lib_udp
 				-20086 - failure, initialize socket failure
 				X> 0 - success, X is length of sending success
 				X < 0 - failure, X is error msg's id  of calling sendto
-				-20087 - psend is null 
-						[or] len_send is larger than 65535-20-8
-						[or] strlen(psend) is larger than 65535-20-8
+				-20087 - psend isnull  [or] 
+						len_send is larger than len_buf_send_recv_10240 [or]
+						strlen(psend) is larger than len_buf_send_recv_10240
 		*/
-		virtual int send(const char *psend, const unsigned int len_send) = 0;
+		virtual int send_(const char *psend, const unsigned int len_send) = 0;
 
 
 		/* @ brief: close socket
@@ -171,7 +171,7 @@ namespace lib_udp
 				-20086 - failure, udp doesnt open
 				X - failure, error msg's id
 		*/
-		virtual int shutdown() = 0;
+		virtual int shutdown_() = 0;
 	};
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -187,14 +187,14 @@ namespace lib_udp
 	*  @ return - udpsocket*
 			X = NULL, failure,  
  	*/
-	extern "C" _oct_udp_api_export_  udpsocket* udp_create();
+	extern "C" _oct_udp_api_export_  udp_socket_interface* udp_create();
 
 
 	/* @ brief: release udpsocket pointer , and set pudp's value is NULL
 	*  @ const udpsocket * pudp - from udpsocket* udp_create()  
 	*  @ return -  void
 	*/
-	extern "C" _oct_udp_api_export_ void udp_release(udpsocket* pudp);
+	extern "C" _oct_udp_api_export_ void udp_release(udp_socket_interface* pudp);
 
 	
 
@@ -204,7 +204,7 @@ namespace lib_udp
 	*  @ return -  udpsocket*
 			X = NULL, failure,
 	*/
-	extern "C" _oct_udp_api_export_  udpsocket* udp_wsa_create();
+	extern "C" _oct_udp_api_export_  udp_socket_interface* udp_wsa_create();
 
 
 
