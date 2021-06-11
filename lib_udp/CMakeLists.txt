@@ -1,12 +1,4 @@
 cmake_minimum_required(VERSION 3.14)
-
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-	SET(CMAKE_C_COMPILER /usr/bin/clang)
-	SET(CMAKE_CXX_COMPILER /usr/bin/clang++)
-endif()
-
-
-
 # ---------------------------------------------------------------------------------------------------
 # 1. set name
 project(oct_udp)

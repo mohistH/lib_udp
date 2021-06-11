@@ -18,6 +18,3 @@ del /s *.pch
 rd /s /q %cd%\.vs
 del /s %cd%\Debug\*.lib
 del /s %cd%\Release\*.lib
-
-
-pause

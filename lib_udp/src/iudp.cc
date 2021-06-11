@@ -1,45 +1,39 @@
-﻿
 
 #include "universe_def.h"
-
 #include <new>
-#if defined(os_is_win)
-	#include "iudp.h"
-	#include <udp_imp.h>	
+#include "iudp.h"
+#include "udp_imp.h"
 
-#else
-	#include <udp/udp_interface.h>
-	#include <udp/udp_imp.h>
-
-
-#endif // !_WIN32
 
 
 namespace lib_udp
 {
+
 	/*
-*	@brief:
-*/
-	lib_udp::iudp* lib_udp::create_()
+	*	@brief:
+	*/
+	iudp* udp_create_()
 	{
-		return  new(std::nothrow) udp_imp;
+		return  new(std::nothrow) udp_socket_imp;
+
 	}
+
 
 	/*
 	*	@brief: to release the object, whose type is udpsocket*
 	*/
-	iudp* lib_udp::release_(iudp* pudp)
+	iudp* udp_release_(iudp* pudp)
 	{
-		if (pudp)
-		{
-			pudp->shutdown_();
-			delete pudp;
-		}
+		if ((NULL == pudp) || (nullptr == pudp))
+			return pudp;
 
+		delete pudp;
 		pudp = NULL;
 
 		return pudp;
 	}
 
-
 }
+
+
+
