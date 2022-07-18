@@ -1,344 +1,339 @@
-#ifdef _WIN32
-#pragma once
-#endif /// 
-
-
 #include <iostream>
-#include <memory>
+//#include "uv.h"
+#include "icommonunication.h"
+
 #include <thread>
-#include <chrono>
+//#include "Looper.h"
 
-#include "iudp.h"
-using namespace lib_udp;
-#include <list>
-#include <string>
-#include <WinSock2.h>
-#include <wtypes.h>
-#include <Windows.h>
-
-#include <ws2tcpip.h>
+/// ----------------------------------------------------------------------------
 
 
-template<typename ... Args>
-static std::string str_format(const std::string &format, Args ... args)
-{
-	auto size_buf = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1;
-	std::unique_ptr<char[]> buf(new(std::nothrow) char[size_buf]);
-
-	if (!buf)
-		return std::string("");
-
-	std::snprintf(buf.get(), size_buf, format.c_str(), args ...);
-	return std::string(buf.get(), buf.get() + size_buf - 1);
-}
-
-#pragma  comment(lib, "ws2_32.lib")
-int get_ipv6_win(std::list<std::string>& out_list_ip6)
-{
-
-	int error_id = 0;
-	WORD sock_ver;
-	WSADATA wsaData;
-	int ret_val = 0;
-	sock_ver = MAKEWORD(2, 2);
-	ret_val = WSAStartup(sock_ver, &wsaData);
-	if (0 != ret_val)
-	{
-		error_id = GetLastError();
-		return error_id;
-	}
-
-	if (2 != LOBYTE(wsaData.wVersion) ||
-		2 != HIBYTE(wsaData.wVersion))
-	{
-		WSACleanup();
-		error_id = GetLastError();
-		return error_id;
-	}
-
-
-	// -------------------------------------------------------------------------------
-
-
-	struct addrinfo hint;
-
-	hint.ai_family = AF_INET6;
-	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_flags = AI_PASSIVE;
-	hint.ai_protocol = 0;
-	hint.ai_addrlen = 0;
-	hint.ai_canonname = NULL;
-	hint.ai_addr = NULL;
-	hint.ai_next = NULL;
-
-	const int len_256 = 256;
-	char name_host[len_256] = { 0 };
-
-	struct addrinfo *pailist = nullptr;
-	struct addrinfo *paip = nullptr;
-	const char port_str[] = { "10086" };
-
-	ret_val = getaddrinfo(name_host, port_str, &hint, &pailist);
-
-	// 1.
-	if (0 > ret_val || 0 > pailist)
-	{
-		ret_val = GetLastError();
-
-		WSACleanup();
-		return ret_val;
-	}
-
-	// 2.
-	struct sockaddr_in6 *psinp6 = nullptr;
-	for (paip = pailist; NULL != paip; paip = paip->ai_next)
-	{
-		paip->ai_family = AF_INET6;
-		psinp6 = (struct sockaddr_in6 *)paip->ai_addr;
-		if (nullptr != psinp6 && NULL != psinp6)
-		{
-			std::string str_ipv6;
-			for (int i = 0; i < 16; i++)
-			{
-				if (((i - 1) % 2) && (i > 0))
-					str_ipv6 += std::string(":");
-
-				str_ipv6 += str_format("%02X", psinp6->sin6_addr.u.Byte[i]);
-			}
-
-			out_list_ip6.push_back(str_ipv6);
-		}
-	}
-
-	WSACleanup();
-
-	return ret_val;
-}
-
-
-
-/// to recv data, you must inherit udpsocket_recv class
-class my_udp : public irecv_data
+class my_udp : public lib_commu::IDataDispatch
 {
 public:
-
-	/// constructor
-	my_udp()
+	/// ----------------------------------------------------------------------------
+	/// @brief：		接收数据处理
+	/// @param: 	const unsigned char * pdata - 收到数据
+	/// @param: 	const unsigned int len - 收到数据长度
+	/// @return: 	int - 
+	/// 			
+	/// ----------------------------------------------------------------------------
+	virtual int RecvData(const char* pdata , const size_t len) 
 	{
-		if (NULL == pudp_)
-			pudp_ = udp_create_();//// std::unique_ptr<iudp>(lib_udp::udp_create_()).get();
+		std::cout << "\n\n\n data is coming, len        = " << len << "\n";
+		std::cout << "\n                                =================== thread_id=" << std::this_thread::get_id() << "\n";
+		return 0;
 	}
-
-
-	/// deconstructor
-	virtual ~my_udp()
-	{
-		pudp_ = udp_release_(pudp_);
-	}
-
-
-	/// you must override this function to recv data
-	void on_recv_data_(const unsigned char *pdata_recv, const unsigned int recv_data_len)
-	{
-		/// -------------------------------------------------------------------------------
-		/// 1. recv data
-		std::cout << "\n --------------AAAAAA data length = " << recv_data_len << "\n";
-		for (unsigned int i = 0; i < recv_data_len; i++)
-		{
-			if (i == 10)
-				std:: cout << "\n";
-
-			std::cout << pdata_recv[i] << ", ";
-		}
-		
-		std::cout << "\n";
-	}
-
-	/// -------------------------------------------------------------------------------
-	int init_(udp_param& param)
-	{
-		if (pudp_)
-			return pudp_->init_(param, this);
-
-		return -20000;
-	}
-
-	/// 
-	int send_(const char *psend, const int len_send)
-	{
-		if (pudp_)
-			return pudp_->send_((const unsigned char*)psend, len_send);
-
-		return -20000;
-	}
-
-	/// 
-	int shutdown_()
-	{
-		if (pudp_)
-			return pudp_->shutdown_();
-
-		return -20000;
-	}
-
-	int error_id_()
-	{
-		if (pudp_)
-			return pudp_->error_id_();
-
-		return -20000;
-	}
-
-private:
-	iudp* pudp_ = NULL;
 };
 
 
 
-
-int main(int argc, char *argv[])
+/// ----------------------------------------------------------------------------------------
+/// @brief:  继承 IDataDispatch  实现数据接收与发送结合
+/// ----------------------------------------------------------------------------------------
+class NetUDP : public lib_commu::IDataDispatch, public lib_commu::SendResultNotify
 {
-
-	using namespace  std;
-	std::list <std::string> ip6_list;
-	int retttt =  get_ipv6_win(ip6_list);
-	if ( 0 != retttt)
+public:
+	NetUDP()
 	{
-		std::cout << "ipv6 gets error\n";
-		system("pause");
-		return 0;
+		pudp                                            = lib_commu::NewUDP();
 	}
 
-	int index = 0;
-	for (auto item : ip6_list)
+	virtual ~NetUDP()
 	{
-		cout << ++index << "ip6 = " << item.c_str() << endl;
+		UnInit();
 	}
 
-	//system("pause");
-	//return 0;
 
-
-
-
-
-
-
-
-	/// -------------------------------------------------------------------------------
-	/// 1. to prepare params to initialize
-	udp_param param;
-
-	param._is_log_debug		= false;
-	param._cast_type 		= lib_udp::udp_multi_cast;
-	param._port_dst 		= 10086;
-	param._recv_loop 		= true;
-	param.socket_version_	= kipv6;
-
-#ifdef _WIN32
-	char arr_ipv4[] = "10.0.0.5";
-#elif __linux__
-	char arr_ipv4[] = "192.168.15.129";
-#else 
-	char arr_ipv4[] = "10.1.1.3";
-#endif///
-
-	std::cout << "local IP = " << arr_ipv4 << std::endl;
-	char arr_dst[] = "233.0.0.11";
-
-	//param.dest_ip_.value_ = std::string(arr_dst);
-	//param.local_ip_.value_ = std::string(arr_ipv4);
-
-	std::string str_ipv6;
-	int indexxxx = 0;
-	for (auto list_item : ip6_list)
+	/// --------------------------------------------------------------------------------
+	/// @brief: RecvData
+	/// --------------------------------------------------------------------------------
+	virtual int RecvData(const char* pdata, const size_t len) override
 	{
-		str_ipv6 = list_item;
-		if (3 == indexxxx)
-			break;
-		++indexxxx;
-	}
-
-	param.dest_ip_.value_	= std::string("FF02::1");
-	param.local_ip_.value_ = str_ipv6;/// ip6_list.front();
-
-
-	
-	
-	/// -------------------------------------------------------------------------------
-	/// 1. to create 
-	std::unique_ptr<my_udp> pmy_udp(new(std::nothrow) my_udp);
-
-	//my_udp* pmy_udp = new(std::nothrow) my_udp;
-
-	/// failure
-	if (!pmy_udp)
-	{
-		std::cout << "\n my_udp crated failure\n";
-
-#ifdef _WIN32
-		system("pause");
-#endif ///_WIN32
-		return 0;
-	}
-	
-
-	/// -------------------------------------------------------------------------------
-	/// 2. to initialize udp
-	int ret = 0;
-	ret = pmy_udp->init_(param);
-	if (0 != ret)
-	{
-		std::cout << "\ninit error , id = " << ret << ", error id=" << pmy_udp->error_id_() << "\n\n";
-		ret = pmy_udp->shutdown_();
-		if (0 != ret)
-				std::cout << "\nshutdown error , id = " << ret << "\n";
-#ifdef _WIN32
-		system("pause");
-#endif ///_WIN32
+		//throw std::logic_error("The method or operation is not implemented.");
+		std::cout << "\n rec vdata                      =";
+		for (size_t index                               = 0; index < len; ++index)
+		{
+			std::cout << pdata[index] << " ";
+		}
 
 		return 0;
 	}
 
-	//pmy_udp->shutdown_();
 
-	////delete pmy_udp;
-	////pmy_udp = NULL;
-
-	//return 0;
-
-
-	std::cout << "\n init_ip4 success\n";
-
-	/// -------------------------------------------------------------------------------
-	/// 4. to send data
-	char arr[] = "1234567890";
-	for (int i = 0; i < 1; i++)
+	/// --------------------------------------------------------------------------------
+	/// @brief: Init
+	/// --------------------------------------------------------------------------------
+	int Init(lib_commu::UDPInit& param) 
 	{
-		int send_len = pmy_udp->send_(arr, strlen(arr));
-		/// to output the result 
-		std::cout << "udp send, send length = " << send_len << "\n";
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000 * 1));
+		if (pudp)
+		{
+			param.send_notify_							= this;
+			int ret                                     = pudp->Init(param);
+
+			if (0 != ret)
+			{
+				std::cout << "\n init, errmsg           =" << pudp->GetLastErrorMsg().c_str() << "\n";
+			}
+
+			return ret;
+		}
+
+		return -1;
 	}
 
 
+	/// --------------------------------------------------------------------------------
+	/// @brief: Send
+	/// --------------------------------------------------------------------------------
+	int Send(const char* pdata, const size_t len)
+	{
+		if (pudp)
+		{
+			int ret                                     = pudp->Send(pdata, len);
 
-	/// to recv data, it needs to rest
-	std::cout << "\n---------------------------main 1111----------------------------\n";
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000 * 1));
-	std::cout << "\n---------------------------main 2222----------------------------\n";
-	pmy_udp->shutdown_();
-	std::cout << "\n---------------------------main 3333----------------------------\n";
-	std::cout << "\nudp has closed\n";
+			if (0 != ret)
+			{
+				std::cout << "\n Send, errmsg           =" << pudp->GetLastErrorMsg().c_str() << "\n";
+			}
+
+			return ret;
+		}
+
+		return -1;
+	}
 
 
-	//delete pmy_udp;
-	//pmy_udp = nullptr;
+	/// --------------------------------------------------------------------------------
+	/// @brief: UnInit
+	/// --------------------------------------------------------------------------------
+	int UnInit() 
+	{
+		if (pudp)
+		{
+			try
+			{
+				pudp                                    = lib_commu::DeleteUDP(pudp);
+			}
+			catch (...)
+			{
+				;
+			}
+		}
+		else
+		{
+			;
+		}
 
-#ifdef _WIN32
-	system("pause");
-#endif ///_WIN32
-	return 0;
+		return 0;
+	}
+
+
+	/// --------------------------------------------------------------------------------
+	/// @brief: AfterSend
+	/// --------------------------------------------------------------------------------
+	virtual void AfterSend(const bool send_ret, const std::string& str_ret) override
+	{
+		//throw std::logic_error("The method or operation is not implemented.");
+		static int index = 0;
+		std::cout << "\n========================index=" << ++index << ", ret=" << send_ret << ", str_ret=" << str_ret.c_str() << "\n";
+	}
+
+private:
+	lib_commu::IUDP* pudp;
+
+};
+
+
+
+/// ----------------------------------------------------------------------------
+
+
+void IPAll()
+{
+	using namespace lib_commu;
+
+	ListInterFaceAddresses listIA;
+	BaseKits bk;
+
+
+	bk.IPAll(listIA);
+	ListInterFaceAddresses::iterator IPIt = listIA.begin();
+
+	for (; IPIt != listIA.end(); ++IPIt)
+	{
+		std::cout << "name                          =" << IPIt->m_name.c_str() << "-" << IPIt->m_value.c_str() << "\n";
+	}
 }
 
 
+/// ----------------------------------------------------------------------------------------
+/// @brief: 将数据接收和数据发送分离
+/// ----------------------------------------------------------------------------------------
+void call_udp_recv_data_example_01()
+{
+	using namespace lib_commu;
+
+	/// 数据接收对象 没有和 IDUP 绑定一起
+	my_udp		udp_recv;
+
+	/// udp
+	IUDP* pudp                                          = NewUDP();
+
+	if (nullptr                                         == pudp)
+		;
+	else
+	{
+		UDPInit param;
+
+		int uni_or_multi                                = 0;
+		std::cout << "1-multi, 0 -uni:";
+		std::cin >> uni_or_multi;
+
+		if (1                                           == uni_or_multi)
+		{
+			param.cast_type_                            = CT_MULTI;
+			param.dest_ip_                              = std::string("233.0.0.212");
+		}
+		else
+		{
+			param.cast_type_                            = CT_UNI;
+			param.dest_ip_                              = std::string("10.0.0.6");
+		}
+		param.local_ip_                                 = std::string("10.0.0.6");
+
+		param.dest_port_                                = 27500;
+		param.socket_ver_                               = SOCKET_VERSION_4;
+
+		/// 初始化
+		int ret                                         = pudp->Init(param);
+		if (0 != ret)
+		{
+			///
+			std::cout << "\n\n init_failed              =" << ret << "\n\n";
+		}
+		else
+		{
+			for (int index                              = 0; index < 6; ++index)
+			{
+				/// 发送数据
+				char arr[]                              = "1234567890";
+				ret                                     = pudp->Send(arr, strlen(arr));
+				if (0 != ret)
+				{
+					std::cout << "\n\n send_failed, ret =" << ret << "\n\n";
+				}
+				else
+				{
+					/// 发送成功
+					std::cout << "\n\n send_success\n\n";
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		}
+
+		std::cout << "\n\n";
+
+		std::cout << "\n 33333333333333333 thread_id    =" << std::this_thread::get_id() << "\n";
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000 * 1));
+
+		pudp                                            = DeleteUDP(pudp);
+	}
+}
+
+/// ----------------------------------------------------------------------------------------
+/// @brief: 将接收和发送聚合到一个类中
+/// ----------------------------------------------------------------------------------------
+void call_udp_recv_data_example_02()
+{
+	NetUDP net_udp;
+
+	using namespace lib_commu;
+	UDPInit param;
+
+	int uni_or_multi                                    = 0;
+
+	std::cout << "1-multi, 0 -uni:";
+	std::cin >> uni_or_multi;
+
+	if (1                                               == uni_or_multi)
+	{
+		param.cast_type_                                = CT_MULTI;
+		param.dest_ip_                                  = std::string("233.0.0.212");
+	}
+	else
+	{
+		param.cast_type_                                = CT_UNI;
+		param.dest_ip_                                  = std::string("10.0.0.6");
+	}
+	param.local_ip_                                     = std::string("10.0.0.6");
+
+	param.dest_port_                                    = 27500;
+	param.socket_ver_                                   = SOCKET_VERSION_4;
+
+	/// 初始化
+	int ret                                             = net_udp.Init(param);
+	if (0 != ret)
+	{
+		///
+		std::cout << "\n\n init_failed                  =" << ret << "\n\n";
+	}
+	else
+	{
+		for (int index                                  = 0; index < 100; ++index)
+		{
+			/// 发送数据
+			char arr[]                                  = "1234567890";
+			ret                                         = net_udp.Send(arr, strlen(arr));
+			if (0 != ret)
+			{
+				std::cout << "\n\n send_failed, ret     =" << ret << "\n\n";
+			}
+			else
+			{
+				/// 发送成功
+				//std::cout << "\n\n send_success\n\n";
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+		}
+	}
+
+	std::cout << "\n 33333333333333333 thread_id        =" << std::this_thread::get_id() << "\n";
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000 * 1));
+}
+
+
+#include "uv.h"
+namespace uv_timer
+{
+	void timer_callback(uv_timer_t* handle)
+	{
+		static int index =0 ;
+		std::cout << "\n index=" << ++ index;
+	}
+
+	int call_uv_timer()
+	{
+		uv_loop_t* ploop = uv_default_loop();
+		uv_timer_t timer_req;
+		uv_timer_init(ploop, &timer_req);
+
+		uv_timer_start(&timer_req, timer_callback, 1000, 1000);
+
+		return uv_run(ploop, UV_RUN_DEFAULT);
+	}
+}
+
+
+int main()
+{
+	 call_udp_recv_data_example_02();
+
+	//return uv_timer::call_uv_timer();
+
+	return 0;
+}

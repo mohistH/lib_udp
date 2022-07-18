@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.14)
 # ---------------------------------------------------------------------------------------------------
 # 1. set name
-project(oct_udp)
+project(lib_commu)
 
 # ---------------------------------------------------------------------------------------------------
 #4. set some options
 option(example_shared 			"an example to show how to use dynamic library" ON)
-option(lib_shared 				"to generate dynamic lbrary" 					ON)
-# option(lib_mfc 					"to generate a dynamic library to support MFC" 	OFF)
+option(lib_shared 				"ON=SHARED, OFF=STATIC" 					ON)
+
 
 
 # lib type 
@@ -18,91 +18,129 @@ else()
 	set(lib_udp_type STATIC)
 endif(lib_shared)
 
+
+
 # ---------------------------------------------------------------------------------------------------
 # 2. to get all source files
 # set header files
 # -------------------------------------------------------------------------------------
-file(GLOB_RECURSE udp_inc ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
+file(GLOB_RECURSE lib_inc_files ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
 # set source files
 # -------------------------------------------------------------------------------------
-file(GLOB_RECURSE udp_src ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc)
+file(GLOB_RECURSE lib_src_files ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc)
 
+
+set(CMAKE_MODULE_PATH 
+${CMAKE_MODULE_PATH}
+${CMAKE_CURRENT_SOURCE_DIR}/cmake
+)
+FIND_PACKAGE(libuv64 REQUIRED)
+
+
+
+set(compiler_name "")
+
+## 判断编译器
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	set(compiler_name "clang")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	set(compiler_name "gnu")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+	set(compiler_name "inter")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	if(MSVC_VERSION EQUAL 1400)
+		set(compiler_name "vc8")
+	elseif(MSVC_VERSION EQUAL 1500)
+		set(compiler_name "vc9")
+	elseif(MSVC_VERSION EQUAL 1600)
+		set(compiler_name "vc10")
+	elseif(MSVC_VERSION EQUAL 1700)
+		set(compiler_name "vc11")
+	elseif(MSVC_VERSION EQUAL 1800)
+		set(compiler_name "vc12")
+	elseif(MSVC_VERSION EQUAL 1900)
+		set(compiler_name "vc14")
+	endif()
+
+endif()
 
 # ---------------------------------------------------------------------------------------------
-set(publish_path  ${CMAKE_CURRENT_SOURCE_DIR}/publish)
+set(publish_path  										${CMAKE_CURRENT_SOURCE_DIR}/publish/${compiler_name})
 
-message("")
-message(${publish_path})
-message("")
+
+# 64位 还是32
+set(platform_info 				"")
 
 # 64位
 if (CMAKE_CL_64)
-    # 设置 可执行程序输出目录
-	set(publish_bin_debug 			${publish_path}/x64/bin/debug)
-	set(publish_bin_release 		${publish_path}/x64/bin/release)
-
-    # 设置库文件输出目录
-	set(publish_lib_debug 			${publish_path}/x64/lib/debug)
-	set(publish_lib_release 		${publish_path}/x64/lib/release)
-
-    set(publih_lib_include          ${publish_path}/x64/include)
-
-	set(PROJECT_NAME 				${PROJECT_NAME}64)
+	set(platform_info 				"x64")
 # ---------------------------------------------------------------------------------------------
 # 32
 else()
- # 设置 可执行程序输出目录
-	set(publish_bin_debug 			${publish_path}/x86/bin/debug)
-	set(publish_bin_release 		${publish_path}/x86/bin/release)
-
- # 设置库文件输出目录
-	set(publish_lib_debug 			${publish_path}/x86/lib/debug)
-	set(publish_lib_release 		${publish_path}/x86/lib/release)
-
-    set(publih_lib_include          ${publish_path}/x86/include)
+	set(platform_info 				"x86")
 endif()
 # ---------------------------------------------------------------------------------------------
+
+set(publish_path ${publish_path}/${platform_info})
+
+
+ # 设置 可执行程序输出目录
+ set(publish_bin_debug 			${publish_path}/bin/debug)
+ set(publish_bin_release 		${publish_path}/bin/release)
+
+# 设置库文件输出目录
+ set(publish_lib_debug 			${publish_path}/lib/debug)
+ set(publish_lib_release 		${publish_path}/lib/release)
+
+ set(publih_lib_include          ${publish_path}/include)
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------
+# 设置项目名
+set(PROJECT_NAME 				${PROJECT_NAME})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG 				${publish_lib_debug})    
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE 				${publish_lib_release})
 
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG 				${publish_bin_debug})   
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE 				${publish_bin_release}) 
 
-
 set(CMAKE_DEBUG_POSTFIX "D") 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+FIND_PACKAGE(libuv64 REQUIRED)
+
 
 
 # build a library for udp
 function(lib_udp_on_win)
-	# dynamic library
-	# ---------------------------------------------------------------------------------------------------
+	# build program
+	add_library( ${PROJECT_NAME} ${lib_udp_type} ${lib_inc_files} ${lib_src_files})
 
-	# compiler is vs
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
- 		
-		# build program
-		add_library( ${PROJECT_NAME} ${lib_udp_type} ${udp_src} ${udp_inc})
+	add_definitions(-DWIN32_LEAN_AND_MEAN)
 
-		# .h and .cxx files
-		target_sources(${PROJECT_NAME} PRIVATE ${udp_src} ${udp_inc})
+	# set 
+	target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-		# set 
-		target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-		target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/udp)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include/icommonunication.h DESTINATION ${publih_lib_include})
 
-		file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include/iudp.h DESTINATION ${publih_lib_include})
+	if (lib_uv_has_found)
+		target_include_directories(${PROJECT_NAME}
+		# PRIVATE ${uv_inc_files}
+		PRIVATE ${uv_inc_path}
+		)
+		target_link_libraries(${PROJECT_NAME} PRIVATE ${uv_lib_files})
+		file(COPY ${uv_bin_debug_file} DESTINATION ${publish_bin_debug})
+		file(COPY ${uv_bin_release_file} DESTINATION ${publish_bin_release})
+	endif()
 
-		# use c++11
-		target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
-
-		# link library
-		target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
-
-
-	endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 endfunction(lib_udp_on_win)
 
 
@@ -126,7 +164,7 @@ function(lib_udp_on_linux)
 
 		# set 
 		target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-		target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/udp)
+		target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ext/lib_uv/include)
 
 		# use c++11
 		target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_11)
@@ -139,6 +177,34 @@ endfunction (lib_udp_on_linux)
 
 
 
+if (uv_exam)
+
+	set(uv_example
+	${CMAKE_CURRENT_SOURCE_DIR}/uv_example/exam.cc
+	)
+
+	# build program
+	add_executable( uv_demo ${uv_example})
+
+	add_definitions(-DWIN32_LEAN_AND_MEAN)
+
+	# .h and .cxx files
+	# target_sources(${PROJECT_NAME} PRIVATE ${lib_inc_files} ${lib_src_files})
+
+	# set 
+	target_include_directories(uv_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+	# link library
+	# target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
+
+	if (lib_uv_has_found)
+		target_include_directories(uv_demo PRIVATE ${uv_inc_files})
+		target_link_libraries(uv_demo PRIVATE ${uv_lib_files})
+	endif()
+endif(uv_exam)
+
+
+
 
 
 
@@ -147,14 +213,27 @@ function(lib_udp_example_shared)
 		#7.1 set src path
 	set (exam_src 
 		${CMAKE_CURRENT_SOURCE_DIR}/example/main.cc
+		${CMAKE_CURRENT_SOURCE_DIR}/include/icommonunication.h
 	)
+
 
 	set(exam_name "call_lib")
 
 	# 7.3 to get an executable program
-	add_executable(${exam_name} ${exam_src} ${udp_inc})
-	target_include_directories(${exam_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+	add_executable(${exam_name} ${exam_src} ${uv_inc_files} )
+
+
+	target_include_directories(${exam_name} 
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+	)
+
 	target_link_libraries(${exam_name} PRIVATE ${PROJECT_NAME})
+
+	if (lib_uv_has_found)
+		target_include_directories(${exam_name} PRIVATE ${uv_inc_files})
+		target_link_libraries(${exam_name} PRIVATE ${PROJECT_NAME})
+		target_link_libraries(${exam_name} PRIVATE ${uv_lib_files})
+		endif()
 
 endfunction(lib_udp_example_shared)
 
@@ -212,15 +291,6 @@ ELSE ()
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 
-## 判断编译器
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-# using Clang
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-# using GCC
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-# using Intel C++
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-# using Visual Studio C++
-endif()
+
 
 
