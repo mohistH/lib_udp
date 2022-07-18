@@ -1,7 +1,7 @@
 
 ## 仓库地址
-	- [gitee](https://gitee.com/mohistH/lib_udp)
-	- [github](https://github.com/mohistH/lib_udp)
+[gitee](https://gitee.com/mohistH/lib_udp)
+[github](https://github.com/mohistH/lib_udp)
 
 
 ## 特点
